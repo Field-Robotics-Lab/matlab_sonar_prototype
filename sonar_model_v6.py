@@ -11,9 +11,9 @@ from math import sqrt, sin, cos, pi, log
 import numpy as np
 import matplotlib.pyplot as plt
 
-# sinc function
-def custom_sinc(x):
-    return np.abs(np.sin(x)/x)
+# unnormalized sinc function
+def unnormalized_sinc(t):
+    return np.nan_to_num(np.sin(t)/t, nan=1.0)
 
 # Input Parameters
 # The BlueView P900-45 is used as an example sonar for the purposes of
@@ -104,8 +104,7 @@ for k in range(nBeams):
     np3_P_f[k,i,:] = np2_P_f_ray[i,:]
     np2_P_beam = np.sum(np3_P_f, 1)
 
-    np1_beamPatternCurrent = np.nan_to_num(custom_sinc(np1_th / beamWidth)**2,
-                                           nan=1.0)
+    np1_beamPatternCurrent = np.abs(unnormalized_sinc(np1_th / beamWidth)**2)
 
     # frequency domain to time domain
     print("np2_P_beam")
