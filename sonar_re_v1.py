@@ -39,10 +39,10 @@ ray_nAzimuthRays = 3
 ray_nElevationRays = 3
 
 # calculated Sonar sensor properties
-ray_azimuthAngles = beam_azimuthAngle + np.linspace(
+ray_azimuthAnglesf1 = beam_azimuthAngle + np.linspace(
                  -beam_azimuthAngleWidth / 2, beam_azimuthAngleWidth / 2,
                  ray_nAzimuthRays)
-ray_elevationAngles = beam_elevationAngle + np.linspace(
+ray_elevationAnglesf1 = beam_elevationAngle + np.linspace(
                  -beam_elevationAngleWidth / 2, beam_elevationAngleWidth / 2,
                  ray_nElevationRays)
 ray_azimuthAngleWidth = beam_azimuthAngleWidth/(ray_nAzimuthRays - 1)
@@ -88,9 +88,9 @@ for k in range(ray_nAzimuthRays):
 
         distance = ray_distancef2[k,i]
         azimuthBeamPattern = (np.abs(unnormalized_sinc(pi * 0.884
-                   / ray_azimuthAngleWidth * sin(ray_azimuthAngles[k]))))**2
+               / ray_azimuthAngleWidth * sin(ray_azimuthAnglesf1[k]))))**2
         elevationBeamPattern = (np.abs(unnormalized_sinc(pi * 0.884
-                  / ray_elevationAngleWidth * sin(ray_elevationAngles[i]))))**2
+               / ray_elevationAngleWidth * sin(ray_elevationAnglesf1[i]))))**2
         amplitude = (((xi_z + 1j * xi_y)
                      / sqrt(2))
                      * (sqrt(mu * cos(alpha)**2 * distance**2
@@ -108,7 +108,7 @@ for k in range(ray_nAzimuthRays):
 P_beamf1 = np.sum(np.sum(P_ray_f3c, 1), 0)
 P_beam_tf1 = np.fft.ifft(P_beamf1)
 
-## Plotting
+## Plots
 plt.figure(figsize=(10,8))
 plt.suptitle("%s azimuth rays, %d elevation rays"%(ray_nAzimuthRays,
                                                    ray_nElevationRays))
@@ -129,17 +129,6 @@ plt.grid(True)
 plt.plot(time1f, SPLf1, linewidth=0.5)
 plt.xlabel('Time, [s]')
 plt.ylabel('Sound Pressure Level, [Pa]')
-
-#grid on hold on
-## axis([0 3e-3 -400 400])
-#set(0, 'defaulttextfontsize',20)
-#set(0, 'defaultaxesfontsize',10)
-#set(gcf,'color','w')
-## export_fig SingleBeam_SPL.png -png -r300 -painters
-
-## figure (3)
-#plt.subplot(2,2,3)
-#plt.imshow(np2_SPL_modified.T, aspect="auto")
 
 plt.show()
 
