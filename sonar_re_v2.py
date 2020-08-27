@@ -31,22 +31,22 @@ fmax = sonarFreq + bandwidth/2*4 # Calculated requency spectrum
 
 # Sonar sensor properties
 nBeams = 1
-beam_azimuthAngle = 0.0 # Beam at center line in azimuth direction
 beam_elevationAngle = 0.0175 # Beam looking down in elevation direction
-beam_azimuthAngleWidth = 0.1 # radians
+beam_azimuthAngle = 0.0 # Beam at center line in azimuth direction
 beam_elevationAngleWidth = 0.1 # radians
-ray_nAzimuthRays = 4
-ray_nElevationRays = 3
+beam_azimuthAngleWidth = 0.1 # radians
+ray_nElevationRays = 4
+ray_nAzimuthRays = 3
 
 # calculated Sonar sensor properties
-ray_azimuthAnglesf1 = beam_azimuthAngle + np.linspace(
-                 -beam_azimuthAngleWidth / 2, beam_azimuthAngleWidth / 2,
-                 ray_nAzimuthRays)
 ray_elevationAnglesf1 = beam_elevationAngle + np.linspace(
                  -beam_elevationAngleWidth / 2, beam_elevationAngleWidth / 2,
                  ray_nElevationRays)
-ray_azimuthAngleWidth = beam_azimuthAngleWidth/(ray_nAzimuthRays - 1)
+ray_azimuthAnglesf1 = beam_azimuthAngle + np.linspace(
+                 -beam_azimuthAngleWidth / 2, beam_azimuthAngleWidth / 2,
+                 ray_nAzimuthRays)
 ray_elevationAngleWidth = beam_elevationAngleWidth/(ray_nElevationRays - 1)
+ray_azimuthAngleWidth = beam_azimuthAngleWidth/(ray_nAzimuthRays - 1)
 
 # Sonar inputs
 ray_distancef2 = np.array([[15,5,10], [2,10,10], [15,15,15], [4,2,3]])
@@ -71,15 +71,21 @@ S_f1f = 1e11 * np.exp(-(_freq1f - sonarFreq)**2 * pi**2 / bandwidth**2)
 
 # Point Scattering model
 # Echo level using the point scatter model for P(f) and P(t) for beams
-P_ray_f3c = np.zeros((ray_nAzimuthRays,ray_nElevationRays,nFreq),
+P_ray_f3c = np.zeros((ray_nElevationRays,ray_nAzimuthRays,nFreq),
                       dtype=np.complex_)
-# P_ray_t3f = np.zeros((ray_nAzimuthRays,ray_nElevationRays,nFreq),
+# P_ray_t3f = np.zeros((ray_nElevationRays,ray_nAzimuthRays,nFreq),
 #                      dtype=np.complex_)
+azimuthBeamPattern2f = np.zeros((ray_nElevationRays,ray_nAzimuthRays))
+elevationBeamPattern2f = np.zeros((ray_nElevationRays,ray_nAzimuthRays))
+for k in range(ray_nElevationRays):
+    for i in range(ray_nAzimuthRays):
+        azimuthBeamPattern2f[k,i] = (np.abs(unnormalized_sinc(pi * 0.884
+               / ray_azimuthAngleWidth * sin(ray_azimuthAnglesf1[i]))))**2
+        elevationBeamPattern2f[k,i] = (np.abs(unnormalized_sinc(pi * 0.884
+               / ray_elevationAngleWidth * sin(ray_elevationAnglesf1[k]))))**2
 
-# ray Azimuth
-for k in range(ray_nAzimuthRays):
-    # ray Elevation
-    for i in range(ray_nElevationRays):
+for k in range(ray_nElevationRays):
+    for i in range(ray_nAzimuthRays):
         xi_z = random()   # generate a random number, (Gaussian noise)
         xi_y = random()   # generate another random number, (Gaussian noise)
 
@@ -87,17 +93,13 @@ for k in range(ray_nAzimuthRays):
         alpha = ray_alphaf2[k,i]
 
         distance = ray_distancef2[k,i]
-        azimuthBeamPattern = (np.abs(unnormalized_sinc(pi * 0.884
-               / ray_azimuthAngleWidth * sin(ray_azimuthAnglesf1[k]))))**2
-        elevationBeamPattern = (np.abs(unnormalized_sinc(pi * 0.884
-               / ray_elevationAngleWidth * sin(ray_elevationAnglesf1[i]))))**2
         amplitude = (((xi_z + 1j * xi_y)
                      / sqrt(2))
                      * (sqrt(mu * cos(alpha)**2 * distance**2
                              * ray_azimuthAngleWidth
                              * ray_elevationAngleWidth))
-                     * azimuthBeamPattern
-                     * elevationBeamPattern)
+                     * azimuthBeamPattern2f[k,i]
+                     * elevationBeamPattern2f[k,i])
 
         # Summation of Echo returned from a signal (frequency domain)
         for m in range(nFreq):
@@ -110,8 +112,8 @@ P_beam_tf1 = np.fft.ifft(P_beamf1)
 
 ## Plots
 plt.figure(figsize=(10,8))
-plt.suptitle("%s azimuth rays, %d elevation rays"%(ray_nAzimuthRays,
-                                                   ray_nElevationRays))
+plt.suptitle("%s elevation rays, %d azimuth rays"%(ray_nElevationRays,
+                                                   ray_nAzimuthRays))
 
 # inverse fast fourier transform
 # figure (1)
