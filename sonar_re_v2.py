@@ -9,6 +9,9 @@ from random import random
 from math import sqrt, sin, cos, pi, log
 import numpy as np
 import matplotlib.pyplot as plt
+import time
+
+time_start = time.perf_counter() 
 
 # unnormalized sinc function
 def unnormalized_sinc(t):
@@ -110,6 +113,10 @@ for k in range(ray_nElevationRays):
 P_beamf1 = np.sum(np.sum(P_ray_f3c, 1), 0)
 P_beam_tf1 = np.fft.ifft(P_beamf1)
 
+# Calculate computation time
+time_elapsed = (time.perf_counter()  - time_start)
+print(time_elapsed)
+
 ## Plots
 plt.figure(figsize=(10,8))
 plt.suptitle("%s elevation rays, %d azimuth rays"%(ray_nElevationRays,
@@ -117,7 +124,7 @@ plt.suptitle("%s elevation rays, %d azimuth rays"%(ray_nElevationRays,
 
 # inverse fast fourier transform
 # figure (1)
-plt.subplot(2,2,1)
+plt.subplot(2,1,1)
 plt.grid(True)
 plt.plot(time1f, P_beam_tf1, linewidth=0.5)
 plt.xlabel('Time, [s]')
@@ -126,7 +133,7 @@ plt.ylabel('Pressure, [Pa]')
 # Sound Pressure Level of Echo Level
 # figure (2)
 SPLf1 = 20 * np.log(np.abs(P_beam_tf1)) # sound pressure level, [dB]
-plt.subplot(2,2,2)
+plt.subplot(2,1,2)
 plt.grid(True)
 plt.plot(time1f, SPLf1, linewidth=0.5)
 plt.xlabel('Time, [s]')
