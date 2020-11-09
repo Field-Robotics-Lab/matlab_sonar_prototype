@@ -425,7 +425,7 @@ caxis(clims)
 shading flat
 xlabel('Range [m]')
 ylabel('Beam Angle [Deg]')
-title('Method 2 (corrected): \Phi - R')
+title('Method 2 (corrected): \phi - R')
 h = colorbar;
 ylabel(h,'Echo Level')
 colormap(hot)
