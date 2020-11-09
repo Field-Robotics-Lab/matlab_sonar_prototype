@@ -189,8 +189,7 @@ p_1 = zeros(Nbeams , Nfreq);
 % parallel for loop for each beam.
 % for a GPU, we can use thread and blocks and grids to organize the data.
 tic
-for ii = 1 : 1
-% for ii = Nbeams/2
+for ii = 1 : Nbeams
     currentPhi = sonarBeams(ii);
     currentTheta = 0;
     currentNormal = beamNormalsRotated(ii,:);
@@ -346,7 +345,7 @@ y = range_vector.*sin(sonarBeams);
 % clf
 subplot(2,3,5)
 scatter(x(:),y(:),scatterPointSize,20*log10(abs(p_2(:))),'filled')
-caxis([-60 0] + 20*log10(maxP))
+caxis(clims)
 
 colorbar
 title('Method 2: x-y')
@@ -376,4 +375,4 @@ set(gca,'Color','k')
 axis equal
 axis tight
 
-print('-dpng',fullfile(dataDir,'ScatteringModelComparisons_Dave'))
+print('-dpng',['ScatteringModelComparisons_Dave' date])
