@@ -364,7 +364,7 @@ colormap(hot)
 shading flat
 xlabel('Range [m]')
 ylabel('Beam Angle [Deg]')
-title('Method 1: Bearing - Range')
+title('Method 1: \phi - R')
 h = colorbar;
 ylabel(h,'Echo Level')
 % colormap(viridis)
@@ -394,7 +394,7 @@ pcolor(t_vector*c/2 , sonarBeams*180/pi, 10*log10(abs((p_2)).^2))
 shading flat
 xlabel('Range [m]')
 ylabel('Beam Angle [Deg]')
-title('Method 2: Bearing - Range')
+title('Method 2: \phi - R')
 h = colorbar;
 ylabel(h,'Echo Level')
 colormap(hot)
@@ -425,7 +425,7 @@ caxis(clims)
 shading flat
 xlabel('Range [m]')
 ylabel('Beam Angle [Deg]')
-title('Method 2 (corrected): Bearing - Range')
+title('Method 2 (corrected): \Phi - R')
 h = colorbar;
 ylabel(h,'Echo Level')
 colormap(hot)
@@ -456,7 +456,7 @@ colormap(hot)
 shading flat
 xlabel('Range [m]')
 ylabel('Beam Angle [Deg]')
-title('Method 3 Raster in time: Bearing - Range')
+title('Method 3 Raster in time: \phi - R')
 h = colorbar;
 ylabel(h,'Echo Level')
 % colormap(viridis)
