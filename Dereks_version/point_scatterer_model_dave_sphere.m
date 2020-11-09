@@ -55,7 +55,7 @@ sonarOrientation = [20 , 0 , 0]*pi/180;
 % number of beams. 
 Nbeams = 128;
 % width of each beam in radians
-sonarBeamwidth = 1*pi/180;
+sonarBeamwidth = 2*pi/180;
 if mod(Nbeams,2) == 0
     sonarBeams =  (-Nbeams/2+1:Nbeams/2)*sonarBeamwidth;
 else
@@ -277,13 +277,87 @@ end
 ctime2a = toc;
 fprintf('Beam culling: %g s.\n',ctime2);
 fprintf('Correction to Beam culling: %g s.\n',ctime2a);
-%% Plot the three methods
 
+%% Method 3, incoherently average scatterers that fall in the same time sample
+% This could also be called a form of rasterization for the rays.
+% Right now, it's not faster than method 2, but this is probably because of
+% the small problem size (number of scatterers).
+%
+% Also, matlab is quite slow at for-loops, so the inner loop below
+% (for iii = 1 : Ntime)
+% may be much faster in C/C++
+%
+% This method does not use the random amplitudes generated above, since it
+% computes an incoherent average, which destroys the phase of each
+% scattere. Instead, I create a new one on the fly for each beam and each
+% sample in time. This is not a great way to do it, but it may generate
+% realistic images.
+%
+% Derek: TODO: the amplitudes of this problem don't line up very well
+% might need a fix to correct the rms pressure later
+%
+p_3 = zeros(Nbeams , Nfreq);
+tic
+for ii = 1 : Nbeams
+% for ii = Nbeams/2
+    currentPhi = sonarBeams(ii);
+    currentTheta = 0;
+    currentNormal = beamNormalsRotated(ii,:);
+    cosAngle = -(currentNormal(1)*targetNormals(:,1) ...
+        + currentNormal(2)*targetNormals(:,2) ...
+        + currentNormal(3)*targetNormals(:,3));
+    
+    lambertTerm = targetMu.*cosAngle.^2;
+    % if the angle is negative, then it's zero - this is fake shadowing.
+    % This is already done by occlusion checking, I thik
+    lambertTerm = step(cosAngle).*lambertTerm; 
+%     lambertTerm = ones(size(lambertTerm));
+    propagationTerm = 1./R.^2.*exp(-2.*kpp.*R); %two-way loss of pressure (not intensity). 
+    phiBeam = phiPrime - currentPhi;
+    validInds = abs(phiBeam) <= sonarBeamwidth;
+    % how many scatterers do we ahve
+    nValid = sum(validInds);
+    thetaBeam = thetaPrime - currentTheta;
+    directivityTerm = beamPatternHorizontal(phiBeam(validInds));
+    
+    amplitude =s0.*propagationTerm(validInds).*directivityTerm.* ...
+        sqrt(lambertTerm(validInds).*targetAreas(validInds)); % sqrt is because the lambert model is for intensity, and we are working with pressure.
+    timeDelay = 2.*R(validInds)./c;
+    for iii = 1 : Ntime
+        timeInds = timeDelay > (iii-1)*delta_t & timeDelay <= iii*delta_t;
+        rmsP = sum(amplitude(timeInds));
+%         numInds(ii,iii) = sum(timeInds);
+        p_3(ii,iii) = rmsP.*(randn + 1i*randn)./sqrt(2);
+    end
+    
+    p_3(ii,:) = ifft(fft(p_3(ii,:),[],2).*windowFreq,[],2);
+%     pFreq = sum(exp(1i.*2*R(validInds).*k_vec).*amplitude.*windowFreq,1); %add up all terms and time delays; can take a ton of memory...
+    % put this in the order expected by matlab ifft
+%     pFreq = [pFreq(Nfreq/2:end) pFreq(1:Nfreq/2-1)];
+%     pTime = fft(pFreq,[],2).*delta_f;
+%     pTime = fftshift(pTime,2);
+%     p_2(ii,:) = pTime;
+%     disp([ii Nbeams])
+end
+ctime3 = toc;
+p_3_corrected = zeros(size(p_3));
+tic
+for ii = 1 : Nbeams
+    weights = beamPatternHorizontal(sonarBeams - sonarBeams(ii));
+    p_3_corrected(ii,:) = sum(weights.*p_3./sqrt(sum(weights.^2)),1);
+end
+ctime2a = toc;
+fprintf('Beam culling & raster : %g s.\n',ctime2);
+fprintf('Correction to raster: %g s.\n',ctime2a);
+
+%% Plot the three methods
+figure(1)
+clf
 scatterPointSize = 10;
 maxP = max(abs(p_1(:)));
 % plot 60 dB of dynamic range on a common scale
 clims = [-60 0] + 20*log10(maxP);
-subplot(2,3,1)
+subplot(2,4,1)
 pcolor(t_vector*c/2 , sonarBeams*180/pi, 10*log10(abs((p_1)).^2))
 caxis(clims)
 colormap(hot)
@@ -298,12 +372,12 @@ ylabel(h,'Echo Level')
 x = range_vector.*cos(sonarBeams);
 y = range_vector.*sin(sonarBeams);
 
-subplot(2,3,4)
+subplot(2,4,5)
 scatter(x(:),y(:),scatterPointSize,20*log10(abs(p_1(:))),'filled')
 caxis(clims)
 
 colorbar
-title('Method 1: x-y')
+title('Method 1: x-y')  
 xlabel('X [m]')
 ylabel('Y [Deg]')
 xlim(1.02*[-maxRange maxRange])
@@ -314,9 +388,9 @@ set(gca,'Color','k')
 axis equal
 axis tight
 
-subplot(2,3,2)
+subplot(2,4,2)
 pcolor(t_vector*c/2 , sonarBeams*180/pi, 10*log10(abs((p_2)).^2))
-caxis(clims)
+% caxis(clims)
 shading flat
 xlabel('Range [m]')
 ylabel('Beam Angle [Deg]')
@@ -325,27 +399,12 @@ h = colorbar;
 ylabel(h,'Echo Level')
 colormap(hot)
 
-
-subplot(2,3,3)
-pcolor(t_vector*c/2 , sonarBeams*180/pi, 10*log10(abs((p_2_corrected)).^2))
-caxis(clims)
-shading flat
-xlabel('Range [m]')
-ylabel('Beam Angle [Deg]')
-title('Method 2 (corrected): Bearing - Range')
-h = colorbar;
-ylabel(h,'Echo Level')
-colormap(hot)
-
-
 x = range_vector.*cos(sonarBeams);
 y = range_vector.*sin(sonarBeams);
 
-% figure(3)
-% clf
-subplot(2,3,5)
+subplot(2,4,6)
 scatter(x(:),y(:),scatterPointSize,20*log10(abs(p_2(:))),'filled')
-caxis(clims)
+% caxis(clims)
 
 colorbar
 title('Method 2: x-y')
@@ -359,7 +418,22 @@ set(gca,'Color','k')
 axis equal
 axis tight
 
-subplot(2,3,6)
+
+subplot(2,4,3)
+pcolor(t_vector*c/2 , sonarBeams*180/pi, 10*log10(abs((p_2_corrected)).^2))
+caxis(clims)
+shading flat
+xlabel('Range [m]')
+ylabel('Beam Angle [Deg]')
+title('Method 2 (corrected): Bearing - Range')
+h = colorbar;
+ylabel(h,'Echo Level')
+colormap(hot)
+
+
+
+
+subplot(2,4,7)
 scatter(x(:),y(:),scatterPointSize,20*log10(abs(p_2_corrected(:))),'filled')
 caxis(clims)
 
@@ -375,4 +449,35 @@ set(gca,'Color','k')
 axis equal
 axis tight
 
-print('-dpng',['ScatteringModelComparisons_Dave' date])
+subplot(2,4,4)
+pcolor(t_vector*c/2 , sonarBeams*180/pi, 10*log10(abs((p_3_corrected)).^2))
+caxis([-60 0] + 20*log10(max(abs(p_3_corrected(:)))));
+colormap(hot)
+shading flat
+xlabel('Range [m]')
+ylabel('Beam Angle [Deg]')
+title('Method 3 Raster in time: Bearing - Range')
+h = colorbar;
+ylabel(h,'Echo Level')
+% colormap(viridis)
+
+x = range_vector.*cos(sonarBeams);
+y = range_vector.*sin(sonarBeams);
+
+subplot(2,4,8)
+scatter(x(:),y(:),scatterPointSize,20*log10(abs(p_3_corrected(:))),'filled')
+% caxis(clims)
+caxis([-60 0] + 20*log10(max(abs(p_3_corrected(:)))));
+colorbar
+title('Method 3 Raster in time: x-y')
+xlabel('X [m]')
+ylabel('Y [Deg]')
+xlim(1.02*[-maxRange maxRange])
+ylim(1.02*[-maxRange maxRange])
+h = colorbar;
+ylabel(h,'Echo Level')
+set(gca,'Color','k')
+axis equal
+axis tight
+
+% print('-dpng',['ScatteringModelComparisons_Dave' date])
