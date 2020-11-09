@@ -1,5 +1,4 @@
 % point scatterer model for sphere
-dataDir = '~/iCloudDrive/Research/pointScatterers';
 f0 = 900e3; % Center Frequency: Hz
 c = 1500; % sound velocity: m/s
 lambda = c/f0; % wavelength
@@ -109,20 +108,21 @@ beamPatternHorizontal = @(phi) sinc((2*pi*0.88/sonarBeamwidth)./2.*sin(phi)./pi)
 %% uncomment to create a sphere using the distmesh software
 % (http://persson.berkeley.edu/distmesh/)
 % Need to run  "mex trisurfup.cpp" in the directory to use distmeshsurface.m
-
+% 
 sphereRadius =tauX*20;
 sphere_mesh_size = tauX/3;
-
-fd=@(p) dsphere(p,0,0,0,sphereRadius);
-[spherePts,sphereTriangles]=distmeshsurface(fd,@huniform,sphere_mesh_size,sphereRadius*1.1*[-1,-1,-1;1,1,1]);
-
-save(fullfile(dataDir,'sphereModel'),'spherePts','sphereTriangles')
+% 
+% fd=@(p) dsphere(p,0,0,0,sphereRadius);
+% [spherePts,sphereTriangles]=distmeshsurface(fd,@huniform,sphere_mesh_size,sphereRadius*1.1*[-1,-1,-1;1,1,1]);
+% 
+% save(fullfile(dataDir,'sphereModel'),'spherePts','sphereTriangles')
 
 
 %% set up the geometry
 
 % get surface normals.
-load(fullfile(dataDir,'sphereModel'))
+% load(fullfile(sphereModel,'sphereModel'))
+load('sphereModel.mat')
 targetFaces = sphereTriangles;
 targetPoints = spherePts;
 % translate target to target position;
@@ -189,7 +189,7 @@ p_1 = zeros(Nbeams , Nfreq);
 % parallel for loop for each beam.
 % for a GPU, we can use thread and blocks and grids to organize the data.
 tic
-for ii = 1 : Nbeams
+for ii = 1 : 1
 % for ii = Nbeams/2
     currentPhi = sonarBeams(ii);
     currentTheta = 0;
